@@ -7,6 +7,7 @@ from services.trip_services import (
 )
 from database import init_db, SessionLocal
 from models.trip import Trip
+from services.bedrock_service import get_ai_recommendation
 
 init_db()
 
@@ -50,6 +51,13 @@ def create_trip(request: TripRequest):
 
     recommendation_transport = "train"
 
+    ai_recommendation = get_ai_recommendation(
+        destination=request.destination,
+        days=request.days,
+        budget=request.budget,
+        travel_style=request.travel_style
+    )
+
     # save to PostgreSQL
     trip = Trip(
         destination              = request.destination,
@@ -57,6 +65,7 @@ def create_trip(request: TripRequest):
         budget                   = request.budget,
         category                 = category,
         daily_budget             = daily_budget,
+        ai_recommendation        = ai_recommendation
     )
 
     db = SessionLocal()
@@ -112,6 +121,38 @@ def delete_trip(trip_id: int):
     db.close()
 
     return {"message": f"Trip with id {trip_id} deleted"}
+
+# POST /api/v1/trips/{trip_id}/generate
+# Retrieve an existing trip, generate AI recommendation, save, and return it.
+@app.post("/api/v1/trips/{trip_id}/generate")
+def generate_trip_recommendation(trip_id: int):
+    db = SessionLocal()
+    trip = db.query(Trip).filter(Trip.id == trip_id).first()
+
+    if trip is None:
+        db.close()
+        raise HTTPException(status_code=404, detail=f"Trip with id {trip_id} not found")
+
+    # Generate AI recommendation via Amazon Bedrock
+    recommendation = get_ai_recommendation(
+        destination=trip.destination,
+        days=trip.days,
+        budget=trip.budget,
+        travel_style=trip.category,
+    )
+
+    # Save recommendation to PostgreSQL
+    trip.ai_recommendation = recommendation
+    db.commit()
+    db.refresh(trip)
+    db.close()
+
+    return {
+        "trip_id": trip.id,
+        "destination": trip.destination,
+        "recommendation": recommendation,
+    }
+
 
 # PUT /api/v1/trips/{trip_id}
 @app.put("/api/v1/trips/{trip_id}")
