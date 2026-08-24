@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from services.trip_services import (
     calculate_daily_budget,
@@ -12,6 +13,14 @@ from services.bedrock_service import get_ai_recommendation
 init_db()
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class TripRequest(BaseModel):
     destination: str
@@ -49,23 +58,16 @@ def create_trip(request: TripRequest):
         request.budget
     )
 
-    recommendation_transport = "train"
+    recommendation_transport = get_transportation(category)
 
-    ai_recommendation = get_ai_recommendation(
-        destination=request.destination,
-        days=request.days,
-        budget=request.budget,
-        travel_style=request.travel_style
-    )
-
-    # save to PostgreSQL
+    # save to PostgreSQL (AI recommendation generated separately via /generate)
     trip = Trip(
         destination              = request.destination,
         days                     = request.days,
         budget                   = request.budget,
         category                 = category,
         daily_budget             = daily_budget,
-        ai_recommendation        = ai_recommendation
+        ai_recommendation        = None
     )
 
     db = SessionLocal()
@@ -75,12 +77,13 @@ def create_trip(request: TripRequest):
     db.close()
 
     return {
-        "destination": request.destination,
-        "days": request.days,
-        "budget": request.budget,
-        "travel_style": request.travel_style,
-        "daily_budget": daily_budget,
-        "category": category,
+        "id":                     trip.id,
+        "destination":            request.destination,
+        "days":                   request.days,
+        "budget":                 request.budget,
+        "travel_style":           request.travel_style,
+        "daily_budget":           daily_budget,
+        "category":               category,
         "recommendation_transport": recommendation_transport
     }
 
