@@ -1,5 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
+import os
 from pydantic import BaseModel
 from services.trip_services import (
     calculate_daily_budget,
@@ -10,13 +12,15 @@ from database import init_db, SessionLocal
 from models.trip import Trip
 from services.bedrock_service import get_ai_recommendation
 
+load_dotenv()
+
 init_db()
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=[os.getenv("FRONTEND_URL", "http://localhost:3000")],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -67,6 +71,7 @@ def create_trip(request: TripRequest):
         budget                   = request.budget,
         category                 = category,
         daily_budget             = daily_budget,
+        travel_style             = request.travel_style,
         ai_recommendation        = None
     )
 
