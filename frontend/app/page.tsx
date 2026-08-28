@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import Link from "next/link";
+import { createTrip, generateItinerary } from "@/services/tripService";
 
 type TripResult = {
   id?: number;
@@ -33,6 +34,13 @@ export default function Home() {
   const [loadingAI, setLoadingAI] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    if (!token) {
+      router.push("/login");
+    }
+  }, [router]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
@@ -45,31 +53,21 @@ export default function Home() {
     setAiRec("");
 
     try {
-      const res = await fetch(
-        process.env.NEXT_PUBLIC_API_URL
-          ? `${process.env.NEXT_PUBLIC_API_URL}/api/v1/trips`
-          : "http://localhost:8000/api/v1/trips",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            destination: form.destination,
-            days: Number(form.days),
-            budget: Number(form.budget),
-            travel_style: form.travel_style,
-          }),
-        }
-      );
+      const data = await createTrip({
+        destination: form.destination,
+        days: Number(form.days),
+        budget: Number(form.budget),
+        travel_style: form.travel_style,
+      });
 
-      if (!res.ok) {
-        const errBody = await res.text();
-        throw new Error(`Server error ${res.status}: ${errBody}`);
-      }
-
-      const data: TripResult = await res.json();
       setResult(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong.");
+      const msg = err instanceof Error ? err.message : "Something went wrong.";
+      if (msg.includes("401") || msg.includes("403") || msg.includes("Not authenticated")) {
+        setError("You need to sign in to plan a trip.");
+      } else {
+        setError(msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -81,19 +79,7 @@ export default function Home() {
     setError("");
 
     try {
-      const res = await fetch(
-        process.env.NEXT_PUBLIC_API_URL
-          ? `${process.env.NEXT_PUBLIC_API_URL}/api/v1/trips/${result.id}/generate`
-          : `http://localhost:8000/api/v1/trips/${result.id}/generate`,
-        { method: "POST" }
-      );
-
-      if (!res.ok) {
-        const errBody = await res.text();
-        throw new Error(`AI error ${res.status}: ${errBody}`);
-      }
-
-      await res.json();
+      await generateItinerary(result.id);
       router.push("/trips");
     } catch (err) {
       setError(err instanceof Error ? err.message : "AI generation failed.");
@@ -118,15 +104,23 @@ export default function Home() {
         alt="Beautiful Tropical Beach" 
         className="fixed inset-0 w-full h-full object-cover -z-20 blur-sm scale-105" 
       />
-      <div className="fixed inset-0 bg-slate-900/40 -z-10"></div>
+      <div className="fixed inset-0 bg-gradient-to-b from-slate-900/50 via-slate-900/30 to-slate-900/60 -z-10"></div>
 
       {/* Hero Section */}
-      <div className="w-full pt-32 pb-48 md:pt-40 md:pb-56 flex flex-col items-center justify-center text-white px-4 text-center">
-        <span className="mb-4 inline-block py-1.5 px-4 rounded-lg bg-white/20 backdrop-blur-md border border-white/30 text-xs font-bold tracking-widest uppercase shadow-lg">Discover Your Next Journey</span>
-        <h1 className="text-5xl md:text-7xl font-black mb-6 drop-shadow-2xl tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-blue-100 to-white">
+      <div className="w-full pt-32 pb-48 md:pt-40 md:pb-56 flex flex-col items-center justify-center text-white px-4 text-center relative overflow-hidden">
+        {/* Floating Particles */}
+        <div className="particle particle-1" style={{ top: '20%', left: '15%' }}></div>
+        <div className="particle particle-2" style={{ top: '60%', left: '75%' }}></div>
+        <div className="particle particle-3" style={{ top: '40%', left: '45%' }}></div>
+        <div className="particle particle-1" style={{ top: '70%', left: '25%' }}></div>
+        <div className="particle particle-2" style={{ top: '30%', left: '85%' }}></div>
+        <div className="particle particle-3" style={{ top: '80%', left: '60%' }}></div>
+
+        <span className="animate-float-up mb-4 inline-block py-1.5 px-4 rounded-lg bg-white/20 backdrop-blur-md border border-white/30 text-xs font-bold tracking-widest uppercase shadow-lg animate-badge-pulse">Discover Your Next Journey</span>
+        <h1 className="animate-float-up text-5xl md:text-7xl font-black mb-6 drop-shadow-2xl tracking-tight bg-gradient-to-r from-white via-blue-200 to-cyan-200 via-white to-blue-200 bg-clip-text text-transparent animate-shimmer" style={{ backgroundSize: '200% auto' }}>
           KelanaAI
         </h1>
-        <p className="text-lg md:text-xl max-w-2xl drop-shadow-lg font-medium text-slate-100">
+        <p className="animate-float-up-delayed text-lg md:text-xl max-w-2xl drop-shadow-lg font-medium text-slate-100">
           Crafting personalized, AI-driven itineraries in seconds. Skip the planning, start exploring.
         </p>
       </div>
@@ -136,45 +130,45 @@ export default function Home() {
         <div className={`flex flex-col md:flex-row gap-8 w-full transition-all duration-700 ease-out mx-auto ${result ? "max-w-[1600px]" : "max-w-md justify-center"}`}>
 
           {/* Left — Form */}
-          <div className="rounded-lg w-full max-w-md mx-auto md:mx-0 flex-shrink-0 bg-white/95 backdrop-blur-2xl border border-white/60 rounded-[2rem] p-6 md:p-8 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] self-start">
+          <div className="form-card-glow animate-float-up-delayed w-full max-w-md mx-auto md:mx-0 flex-shrink-0 bg-white backdrop-blur-2xl border border-slate-200/80 rounded-2xl p-6 md:p-8 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.12)] self-start">
             <div className="text-center mb-8">
-              <h2 className="text-3xl font-extrabold bg-gradient-to-br from-blue-600 to-cyan-500 bg-clip-text text-transparent">Plan Your Trip</h2>
-              <p className="text-sm text-slate-500 mt-2 font-medium">Where is your dream destination?</p>
+              <h2 className="text-3xl font-extrabold bg-gradient-to-r from-indigo-600 via-blue-600 to-teal-500 bg-clip-text text-transparent">Plan Your Trip</h2>
+              <p className="text-sm text-slate-400 mt-2 font-medium">Where is your dream destination?</p>
             </div>
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-5">
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold uppercase tracking-wider text-blue-900/60 ml-1">Destination</label>
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-500 ml-1">Destination</label>
                 <input type="text" name="destination" value={form.destination} onChange={handleChange}
                   placeholder="e.g. Kyoto, Japan" required
-                  className="w-full border-2 border-slate-100 rounded-lg px-4 py-3.5 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 bg-slate-50 focus:bg-white transition-all duration-300 font-semibold" />
+                  className="w-full border border-slate-200 rounded-2xl px-4 py-3.5 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 bg-slate-50 focus:bg-white transition-all duration-300 font-semibold" />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold uppercase tracking-wider text-blue-900/60 ml-1">Budget ($)</label>
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500 ml-1">Budget ($)</label>
                   <input type="number" name="budget" value={form.budget} onChange={handleChange}
                     placeholder="2000" min={1} required
-                    className="w-full border-2 border-slate-100 rounded-lg px-4 py-3.5 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 bg-slate-50 focus:bg-white transition-all duration-300 font-semibold" />
+                    className="w-full border border-slate-200 rounded-2xl px-4 py-3.5 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 bg-slate-50 focus:bg-white transition-all duration-300 font-semibold" />
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold uppercase tracking-wider text-blue-900/60 ml-1">Days</label>
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500 ml-1">Days</label>
                   <input type="number" name="days" value={form.days} onChange={handleChange}
                     placeholder="5" min={1} required
-                    className="w-full border-2 border-slate-100 rounded-lg px-4 py-3.5 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 bg-slate-50 focus:bg-white transition-all duration-300 font-semibold" />
+                    className="w-full border border-slate-200 rounded-2xl px-4 py-3.5 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 bg-slate-50 focus:bg-white transition-all duration-300 font-semibold" />
                 </div>
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold uppercase tracking-wider text-blue-900/60 ml-1">Travel Style</label>
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-500 ml-1">Travel Style</label>
                 <input type="text" name="travel_style" value={form.travel_style} onChange={handleChange}
                   placeholder="e.g. Relaxing, Adventure" required
-                  className="w-full border-2 border-slate-100 rounded-lg px-4 py-3.5 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 bg-slate-50 focus:bg-white transition-all duration-300 font-semibold" />
+                  className="w-full border border-slate-200 rounded-2xl px-4 py-3.5 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 bg-slate-50 focus:bg-white transition-all duration-300 font-semibold" />
               </div>
 
               {error && (
-                <div className="bg-red-50 text-red-600 border border-red-100 rounded-lg px-4 py-3 text-sm flex items-start gap-3 mt-1">
+                <div className="bg-red-50 text-red-600 border border-red-100 rounded-2xl px-4 py-3 text-sm flex items-start gap-3 mt-1">
                   <svg className="w-5 h-5 flex-shrink-0 mt-0.5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
@@ -183,7 +177,7 @@ export default function Home() {
               )}
 
               <button type="submit" disabled={loading}
-                className="mt-4 w-full rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 disabled:opacity-70 text-white font-bold text-base py-4 transition-all duration-300 shadow-[0_8px_20px_-6px_rgba(59,130,246,0.6)] hover:shadow-[0_12px_25px_-6px_rgba(59,130,246,0.8)] cursor-pointer transform hover:-translate-y-0.5 active:translate-y-0">
+                className="animate-pulse-glow mt-4 w-full rounded-2xl bg-gradient-to-r from-indigo-600 via-blue-600 to-teal-500 hover:from-indigo-500 hover:via-blue-500 hover:to-teal-400 disabled:opacity-70 text-white font-bold text-base py-4 transition-all duration-300 cursor-pointer transform hover:-translate-y-0.5 active:translate-y-0">
                 {loading ? (
                   <span className="flex items-center justify-center gap-2">
                     <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -244,7 +238,7 @@ export default function Home() {
                   <div className="mt-10 bg-blue-50/50 rounded-lg p-6 border border-blue-100 text-center">
                     <p className="text-sm font-medium text-blue-900/70 mb-4">Ready for the details? Let our AI craft your day-by-day itinerary.</p>
                     <button onClick={handleGenerateAI} disabled={loadingAI}
-                      className="w-full md:w-auto rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50 text-white font-bold text-sm px-8 py-3.5 transition-all duration-300 shadow-md hover:shadow-lg flex items-center justify-center gap-2 cursor-pointer mx-auto">
+                      className="w-full md:w-auto rounded-lg bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50 text-white font-bold text-sm px-8 py-3.5 transition-all duration-300 shadow-md hover:shadow-lg flex items-center justify-center gap-2 cursor-pointer mx-auto">
                       {loadingAI ? (
                         <>
                           <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

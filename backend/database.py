@@ -21,4 +21,15 @@ Base = declarative_base()
 # create all tables
 def init_db() -> None:
     """Create all SQLAlchemy tables for the configured database."""
+    # import all models so their metadata is registered before create_all
+    import models.user  # noqa: F401
+    import models.trip  # noqa: F401
     Base.metadata.create_all(bind=engine)
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+

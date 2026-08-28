@@ -18,10 +18,10 @@ export function parseItinerary(markdown: string): { intro: string; days: DaySect
   const introLines: string[] = [];
 
   for (const line of lines) {
-    const isDay = /^#{1,2}\s+day\s+\d+/i.test(line);
-    const isMorning = /^#{2,3}\s+morning/i.test(line);
-    const isAfternoon = /^#{2,3}\s+afternoon/i.test(line);
-    const isEvening = /^#{2,3}\s+(evening|night)/i.test(line);
+    const isDay = /^(?:#{1,4}\s+|\*\*)?day\s+\d+/i.test(line.trim());
+    const isMorning = /^(?:#{2,4}\s+|[\-\*]\s+(?:\*\*)?)morning/i.test(line.trim());
+    const isAfternoon = /^(?:#{2,4}\s+|[\-\*]\s+(?:\*\*)?)afternoon/i.test(line.trim());
+    const isEvening = /^(?:#{2,4}\s+|[\-\*]\s+(?:\*\*)?)(evening|night)/i.test(line.trim());
 
     if (isDay) {
       if (currentDay) days.push(currentDay);

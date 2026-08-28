@@ -1,11 +1,13 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, Text
+from sqlalchemy import Column, Integer, BigInteger, String, Float, DateTime, Text, ForeignKey
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
 
 class Trip(Base):
     __tablename__ = "trips"
 
-    id: Column[int]             = Column(Integer,  primary_key=True)
+    id: Column[int]             = Column(BigInteger,  primary_key=True)
+    user_id: Column[int]        = Column(BigInteger, ForeignKey("users.id"), nullable=False)
     destination: Column[str]    = Column(String,   nullable=False)
     days: Column[int]           = Column(Integer,  nullable=False)
     budget: Column[float]       = Column(Float,    nullable=False)
@@ -14,3 +16,5 @@ class Trip(Base):
     travel_style: Column[str]   = Column(String,   nullable=True)
     ai_recommendation           = Column(Text,     nullable=True)
     created_at: Column[DateTime] = Column(DateTime, server_default=func.now())
+
+    owner = relationship("User", back_populates="trips")

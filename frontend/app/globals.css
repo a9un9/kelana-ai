@@ -25,3 +25,189 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* ─── Modern Effects ──────────────────────────────────────── */
+
+/* Floating entrance animation */
+@keyframes float-up {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float-up-delayed {
+  0%, 15% {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Subtle floating effect for cards */
+@keyframes gentle-float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+/* Animated gradient border */
+@keyframes gradient-rotate {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Shimmer effect for the hero title */
+@keyframes shimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+/* Pulse glow for CTA button */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 8px 20px -6px rgba(79, 70, 229, 0.5);
+  }
+  50% {
+    box-shadow: 0 8px 35px -6px rgba(79, 70, 229, 0.8), 0 0 20px rgba(20, 184, 166, 0.25);
+  }
+}
+
+/* Floating particles */
+@keyframes particle-float-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.3; }
+  25% { transform: translate(30px, -50px) scale(1.1); opacity: 0.6; }
+  50% { transform: translate(-20px, -100px) scale(0.9); opacity: 0.4; }
+  75% { transform: translate(40px, -60px) scale(1.05); opacity: 0.5; }
+}
+
+@keyframes particle-float-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.2; }
+  33% { transform: translate(-40px, -70px) scale(1.2); opacity: 0.5; }
+  66% { transform: translate(30px, -120px) scale(0.85); opacity: 0.3; }
+}
+
+@keyframes particle-float-3 {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.25; }
+  50% { transform: translate(50px, -80px) scale(1.15); opacity: 0.55; }
+}
+
+/* Subtle badge glow */
+@keyframes badge-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.2); }
+  50% { box-shadow: 0 0 15px 3px rgba(255, 255, 255, 0.15); }
+}
+
+/* Animation utility classes */
+.animate-float-up {
+  animation: float-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-float-up-delayed {
+  animation: float-up-delayed 1s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-gentle-float {
+  animation: gentle-float 6s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  background-size: 200% auto;
+  animation: shimmer 4s linear infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+.animate-badge-pulse {
+  animation: badge-pulse 3s ease-in-out infinite;
+}
+
+.animate-gradient-border {
+  background-size: 300% 300%;
+  animation: gradient-rotate 4s ease infinite;
+}
+
+/* Form card animated border on hover */
+.form-card-glow {
+  position: relative;
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.form-card-glow::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, rgba(79,70,229,0.3), rgba(59,130,246,0.3), rgba(20,184,166,0.25), rgba(79,70,229,0.3));
+  background-size: 300% 300%;
+  animation: gradient-rotate 5s ease infinite;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+.form-card-glow:hover::before {
+  opacity: 1;
+}
+
+.form-card-glow:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 25px 60px -12px rgba(79, 70, 229, 0.15), 0 0 40px -10px rgba(20, 184, 166, 0.1);
+}
+
+/* Particle container */
+.particle {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.particle-1 {
+  width: 6px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.5);
+  animation: particle-float-1 8s ease-in-out infinite;
+}
+
+.particle-2 {
+  width: 4px;
+  height: 4px;
+  background: rgba(96, 165, 250, 0.6);
+  animation: particle-float-2 10s ease-in-out infinite;
+}
+
+.particle-3 {
+  width: 8px;
+  height: 8px;
+  background: rgba(6, 182, 212, 0.4);
+  animation: particle-float-3 7s ease-in-out infinite;
+}
+
+/* Input focus glow */
+input:focus {
+  border-color: #4f46e5 !important;
+  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1), 0 2px 8px rgba(79, 70, 229, 0.08) !important;
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo, useRef } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { formatCurrency, getCategoryClass, getDestinationIcon, getTravelStyleIcon } from "@/lib/utils";
 import { listTrips } from "@/services/tripService";
@@ -8,6 +9,7 @@ import type { Trip } from "@/types";
 import TripCard from "@/components/TripCard";
 
 export default function TripsPage() {
+  const router = useRouter();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -19,6 +21,26 @@ export default function TripsPage() {
   const ITEMS_PER_PAGE = 10;
 
   useEffect(() => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    if (!token) {
+      router.push("/login");
+      return;
+    }
+
+    listTrips()
+      .then(setTrips)
+      .catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message : "Failed to load trips.";
+        if (msg.includes("401") || msg.includes("403") || msg.includes("Not authenticated")) {
+          router.push("/login");
+        } else {
+          setError(msg);
+        }
+      })
+      .finally(() => setLoading(false));
+  }, [router]);
+
+  useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (sortRef.current && !sortRef.current.contains(event.target as Node)) {
         setIsSortOpen(false);
@@ -26,15 +48,6 @@ export default function TripsPage() {
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  useEffect(() => {
-    listTrips()
-      .then(setTrips)
-      .catch((err: unknown) =>
-        setError(err instanceof Error ? err.message : "Failed to load trips.")
-      )
-      .finally(() => setLoading(false));
   }, []);
 
   const filteredAndSortedTrips = useMemo(() => {
@@ -131,7 +144,7 @@ export default function TripsPage() {
         )}
 
         {!loading && !error && trips.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-20 px-6 text-center gap-3 bg-gradient-to-r from-blue-600 to-cyan-500 rounded-3xl shadow-lg mt-4">
+          <div className="flex flex-col items-center justify-center py-20 px-6 text-center gap-3 bg-gradient-to-r from-blue-600 to-cyan-500 rounded-lg shadow-lg mt-4">
             <svg
               className="w-14 h-14 text-white mb-1 transform rotate-45"
               fill="currentColor"
@@ -146,7 +159,7 @@ export default function TripsPage() {
             </p>
             <Link
               href="/"
-              className="mt-4 rounded-full bg-white hover:bg-slate-50 text-blue-600 text-sm font-extrabold px-8 py-3.5 transition-colors shadow-md hover:shadow-lg inline-flex items-center gap-2"
+              className="mt-4 rounded-lg bg-white hover:bg-slate-50 text-blue-600 text-sm font-extrabold px-8 py-3.5 transition-colors shadow-md hover:shadow-lg inline-flex items-center gap-2"
             >
               Generate a Trip &rarr;
             </Link>
@@ -200,7 +213,7 @@ export default function TripsPage() {
                   )}
                 </div>
 
-                <div className="relative w-full sm:w-72">
+                <div className="relative w-full sm:w-75">
                   <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>

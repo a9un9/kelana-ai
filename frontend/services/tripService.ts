@@ -6,6 +6,20 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
+function getAuthHeaders(includeContentType = true) {
+  const headers: Record<string, string> = {};
+  if (includeContentType) {
+    headers["Content-Type"] = "application/json";
+  }
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem("token");
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+  }
+  return headers;
+}
+
 async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const body = await res.text().catch(() => "");
@@ -17,10 +31,10 @@ async function handleResponse<T>(res: Response): Promise<T> {
 // ─── API Calls ─────────────────────────────────────────────────────────────────
 
 /** POST /api/v1/trips — create a new trip summary */
-export async function createTrip(payload: TripRequest): Promise<TripResult> {
+export async function createTrip(payload: Omit<TripRequest, 'user_id'>): Promise<TripResult> {
   const res = await fetch(`${API_URL}/trips`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: getAuthHeaders(),
     body: JSON.stringify(payload),
   });
   return handleResponse<TripResult>(res);
@@ -28,7 +42,10 @@ export async function createTrip(payload: TripRequest): Promise<TripResult> {
 
 /** GET /api/v1/trips — fetch all saved trips */
 export async function listTrips(): Promise<Trip[]> {
-  const res = await fetch(`${API_URL}/trips`, { cache: "no-store" });
+  const res = await fetch(`${API_URL}/trips`, { 
+    cache: "no-store",
+    headers: getAuthHeaders(false)
+  });
   return handleResponse<Trip[]>(res);
 }
 
@@ -36,6 +53,7 @@ export async function listTrips(): Promise<Trip[]> {
 export async function getTrip(id: number): Promise<Trip> {
   const res = await fetch(`${API_URL}/trips/${id}`, {
     cache: "no-store",
+    headers: getAuthHeaders(false)
   });
   return handleResponse<Trip>(res);
 }
@@ -44,6 +62,7 @@ export async function getTrip(id: number): Promise<Trip> {
 export async function generateItinerary(id: number): Promise<GenerateResult> {
   const res = await fetch(`${API_URL}/trips/${id}/generate`, {
     method: "POST",
+    headers: getAuthHeaders(false)
   });
   return handleResponse<GenerateResult>(res);
 }
@@ -52,6 +71,7 @@ export async function generateItinerary(id: number): Promise<GenerateResult> {
 export async function deleteTrip(id: number): Promise<{ message: string }> {
   const res = await fetch(`${API_URL}/trips/${id}`, {
     method: "DELETE",
+    headers: getAuthHeaders(false)
   });
   return handleResponse<{ message: string }>(res);
 }
@@ -59,11 +79,11 @@ export async function deleteTrip(id: number): Promise<{ message: string }> {
 /** PUT /api/v1/trips/:id — update an existing trip */
 export async function updateTrip(
   id: number,
-  payload: TripRequest
+  payload: Omit<TripRequest, 'user_id'>
 ): Promise<Trip> {
   const res = await fetch(`${API_URL}/trips/${id}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: getAuthHeaders(),
     body: JSON.stringify(payload),
   });
   return handleResponse<Trip>(res);

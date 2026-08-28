@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import { ItineraryRenderer } from "@/components/ItineraryRenderer";
@@ -9,6 +10,7 @@ import { formatCurrency, getCategoryClass } from "@/lib/utils";
 import type { Trip } from "@/types";
 
 export default function TripDetailPage(props: PageProps<"/trips/[id]">) {
+  const router = useRouter();
   const [tripId, setTripId] = useState<number | null>(null);
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(true);
@@ -22,14 +24,25 @@ export default function TripDetailPage(props: PageProps<"/trips/[id]">) {
   }, [props.params]);
 
   useEffect(() => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    if (!token) {
+      router.push("/login");
+      return;
+    }
+
     if (tripId === null) return;
     getTrip(tripId)
       .then(setTrip)
-      .catch((err: unknown) =>
-        setError(err instanceof Error ? err.message : "Failed to load trip.")
-      )
+      .catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message : "Failed to load trip.";
+        if (msg.includes("401") || msg.includes("403") || msg.includes("Not authenticated") || msg.includes("Forbidden")) {
+          router.push("/login");
+        } else {
+          setError(msg);
+        }
+      })
       .finally(() => setLoading(false));
-  }, [tripId]);
+  }, [tripId, router]);
 
   const handleGenerateAI = async () => {
     if (!trip) return;
@@ -174,38 +187,31 @@ export default function TripDetailPage(props: PageProps<"/trips/[id]">) {
               </button>
             </div>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-8">
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+              <span className="flex items-center gap-2 text-slate-400 uppercase tracking-wider text-[11px] font-bold mb-2">
                 📍 Destination
-              </p>
-              <p className="text-lg font-extrabold text-slate-900">
-                {trip.destination}
-              </p>
+              </span>
+              <p className="font-extrabold text-slate-900 text-lg line-clamp-1" title={trip.destination}>{trip.destination}</p>
             </div>
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+              <span className="flex items-center gap-2 text-slate-400 uppercase tracking-wider text-[11px] font-bold mb-2">
                 ⏱️ Duration
-              </p>
-              <p className="text-lg font-extrabold text-slate-900">
-                {trip.days} Days
-              </p>
+              </span>
+              <p className="font-extrabold text-slate-900 text-lg">{trip.days} Days</p>
             </div>
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-                💰 Total Budget
-              </p>
-              <p className="text-lg font-extrabold text-emerald-600">
-                {formatCurrency(trip.budget)}
-              </p>
+              <span className="flex items-center gap-2 text-slate-400 uppercase tracking-wider text-[11px] font-bold mb-2">
+                💼 Style
+              </span>
+              <p className="font-extrabold text-slate-900 text-lg capitalize">{trip.travel_style || "-"}</p>
             </div>
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-                📅 Daily Budget
-              </p>
-              <p className="text-lg font-extrabold text-slate-900">
-                {formatCurrency(trip.daily_budget)}
-              </p>
+              <span className="flex items-center gap-2 text-slate-400 uppercase tracking-wider text-[11px] font-bold mb-2">
+                💰 Budget
+              </span>
+              <p className="font-extrabold text-emerald-600 text-lg">${trip.budget.toLocaleString()}</p>
+              <p className="text-xs font-semibold text-slate-400 mt-1">${trip.daily_budget.toFixed(2)} / day</p>
             </div>
           </div>
         </div>
@@ -219,7 +225,7 @@ export default function TripDetailPage(props: PageProps<"/trips/[id]">) {
             <ItineraryRenderer markdown={trip.ai_recommendation} />
           </div>
         ) : (
-          <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-8 text-center">
+          <div className="rounded-lg border border-blue-100 bg-blue-50/50 p-8 text-center">
             <p className="text-sm font-medium text-blue-900/70 mb-4">
               No itinerary yet. Let AI craft a personalised day-by-day plan for
               this trip.
@@ -227,7 +233,7 @@ export default function TripDetailPage(props: PageProps<"/trips/[id]">) {
             <button
               onClick={handleGenerateAI}
               disabled={generatingAI}
-              className="rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-sm px-8 py-3.5 transition-all shadow-md hover:shadow-lg inline-flex items-center gap-2 cursor-pointer"
+              className="rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-sm px-8 py-3.5 transition-all shadow-md hover:shadow-lg inline-flex items-center gap-2 cursor-pointer"
             >
               {generatingAI ? (
                 <>
