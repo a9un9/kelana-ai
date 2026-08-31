@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
+import { isAuthenticated as checkAuth, logout } from "@/lib/auth";
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -17,10 +18,10 @@ export default function Navbar() {
     window.addEventListener("scroll", handleScroll);
     
     // Check initial auth state
-    setIsAuthenticated(!!localStorage.getItem("token"));
+    setIsAuthenticated(checkAuth());
     
     // Listen for custom auth events (e.g. login/logout in same tab)
-    const handleAuthChange = () => setIsAuthenticated(!!localStorage.getItem("token"));
+    const handleAuthChange = () => setIsAuthenticated(checkAuth());
     window.addEventListener("auth-change", handleAuthChange);
     
     // Close dropdown on outside click
@@ -45,10 +46,9 @@ export default function Navbar() {
   }, [pathname]);
   
   const handleLogout = () => {
-    localStorage.removeItem("token");
+    logout();
     setIsAuthenticated(false);
     setIsSettingsOpen(false);
-    window.dispatchEvent(new Event('auth-change'));
     window.location.href = "/";
   };
   
@@ -56,6 +56,7 @@ export default function Navbar() {
     { name: "Plan Trip", path: "/" },
     { name: "Explore", path: "#" },
     { name: "My Trips", path: "/trips" },
+    { name: "Travel Assistant", path: "/assistant" },
   ];
 
   return (

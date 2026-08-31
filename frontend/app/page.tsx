@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import Link from "next/link";
 import { createTrip, generateItinerary } from "@/services/tripService";
+import { isAuthenticated } from "@/lib/auth";
 
 type TripResult = {
   id?: number;
@@ -34,21 +35,20 @@ export default function Home() {
   const [loadingAI, setLoadingAI] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-    if (!token) {
-      router.push("/login");
-    }
-  }, [router]);
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError("");
+
+    if (!isAuthenticated()) {
+      setError("Please sign in or create an account to plan and save your trip.");
+      return;
+    }
+
+    setLoading(true);
     setResult(null);
     setAiRec("");
 
@@ -172,7 +172,20 @@ export default function Home() {
                   <svg className="w-5 h-5 flex-shrink-0 mt-0.5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
-                  <p className="font-semibold break-words">{error}</p>
+                  <div className="font-semibold break-words flex-1">
+                    <p>{error}</p>
+                    {!isAuthenticated() && (
+                      <div className="mt-2.5 flex items-center gap-3 text-xs font-black">
+                        <Link href="/login" className="text-blue-600 hover:text-blue-700 underline">
+                          Sign In &rarr;
+                        </Link>
+                        <span className="text-slate-300 font-normal">|</span>
+                        <Link href="/register" className="text-blue-600 hover:text-blue-700 underline">
+                          Create Account &rarr;
+                        </Link>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 

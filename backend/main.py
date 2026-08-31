@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBearer
 from dotenv import load_dotenv
 import os
 from pydantic import BaseModel
@@ -12,12 +13,16 @@ from database import init_db, SessionLocal
 from models.trip import Trip
 from models.user import User
 from services.bedrock_service import get_ai_recommendation
+from services.kb_service import ask_knowledge_base
 
 load_dotenv()
 
 init_db()
 
 app = FastAPI()
+
+# Register Bearer token security scheme so Swagger UI shows the Authorize button
+security = HTTPBearer()
 
 app.add_middleware(
     CORSMiddleware,
@@ -46,6 +51,9 @@ class UpdateProfileRequest(BaseModel):
     name: str
     email: str
     password: str | None = None
+
+class KnowledgeQueryRequest(BaseModel):
+    question: str
 
 from services.auth_service import register, login, get_current_user, hash_password
 from datetime import datetime
@@ -346,12 +354,34 @@ def get_recommendations():
         "Tokyo Tower",
         "Mount Fuji",
         "Shibuya"
-    ]
-
-@app.get("/api/v1/transportations")
+    ]@app.get("/api/v1/transportations")
 def get_transportations():
     return [
         "Bus",
         "Train",
         "Flight"
     ]
+
+
+# ---------------------------------------------------------------------------
+# Part 5 — Query the Knowledge Base
+# ---------------------------------------------------------------------------
+
+# POST /api/v1/knowledge/ask
+# Uses RetrieveAndGenerate — Bedrock handles retrieval + generation in one call.
+# Unlike InvokeModel (LLM only), this is RAG: documents are searched automatically.
+@app.post("/api/v1/knowledge/ask")
+def ask_knowledge(
+    request: KnowledgeQueryRequest,
+    user: User = Depends(get_current_user),
+):
+    try:
+        result = ask_knowledge_base(request.question)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+    return {
+        "question": request.question,
+        "answer": result["answer"],
+        "sources": result["sources"],
+    }

@@ -1,7 +1,12 @@
+import { getToken, logout } from "@/lib/auth";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
+    if (res.status === 401 || res.status === 403) {
+      logout();
+    }
     const body = await res.text().catch(() => "");
     throw new Error(`HTTP ${res.status}: ${body || res.statusText}`);
   }
@@ -13,11 +18,9 @@ function getAuthHeaders(includeContentType = true) {
   if (includeContentType) {
     headers["Content-Type"] = "application/json";
   }
-  if (typeof window !== "undefined") {
-    const token = localStorage.getItem("token");
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
+  const token = getToken();
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
   }
   return headers;
 }

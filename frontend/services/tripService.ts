@@ -1,4 +1,5 @@
 import type { Trip, TripRequest, TripResult, GenerateResult } from "@/types";
+import { getToken, logout } from "@/lib/auth";
 
 // Read API URL from .env - no more hardcoding
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
@@ -11,17 +12,18 @@ function getAuthHeaders(includeContentType = true) {
   if (includeContentType) {
     headers["Content-Type"] = "application/json";
   }
-  if (typeof window !== "undefined") {
-    const token = localStorage.getItem("token");
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
+  const token = getToken();
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
   }
   return headers;
 }
 
 async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
+    if (res.status === 401 || res.status === 403) {
+      logout();
+    }
     const body = await res.text().catch(() => "");
     throw new Error(`HTTP ${res.status}: ${body || res.statusText}`);
   }
@@ -87,4 +89,14 @@ export async function updateTrip(
     body: JSON.stringify(payload),
   });
   return handleResponse<Trip>(res);
+}
+
+/** POST /api/v1/knowledge/ask — query the Knowledge Base */
+export async function askKnowledgeBase(question: string): Promise<{ question: string; answer: string; sources: string[] }> {
+  const res = await fetch(`${API_URL}/knowledge/ask`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ question }),
+  });
+  return handleResponse<{ question: string; answer: string; sources: string[] }>(res);
 }

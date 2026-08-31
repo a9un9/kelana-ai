@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { login } from "@/services/authService";
+import { setToken } from "@/lib/auth";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -20,9 +21,7 @@ export default function LoginPage() {
     try {
       const data = await login({ email, password });
       if (data.access_token) {
-        localStorage.setItem("token", data.access_token);
-        // Dispatch custom event to trigger navbar update
-        window.dispatchEvent(new Event('auth-change'));
+        setToken(data.access_token);
         router.push("/");
       }
     } catch (err: any) {

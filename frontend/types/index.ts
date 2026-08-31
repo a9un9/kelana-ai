@@ -41,3 +41,13 @@ export type TripRequest = {
   budget: number;
   travel_style: string;
 };
+
+/** Request/response for POST /api/v1/knowledge/ask */
+export type KnowledgeAskRequest = {
+  question: string;
+};
+
+export type KnowledgeAskResponse = {
+  question: string;
+  answer: string;
+};

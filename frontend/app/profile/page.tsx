@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { getProfile, updateProfile } from "@/services/authService";
 import { listTrips } from "@/services/tripService";
+import { isAuthenticated } from "@/lib/auth";
 
 interface UserProfile {
   id: number;
@@ -30,8 +31,7 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-    if (!token) {
+    if (!isAuthenticated()) {
       router.push("/login");
       return;
     }
