@@ -67,11 +67,14 @@ def ask_knowledge_base(question: str) -> dict:
 
     # Step 2 — Ask the LLM with the retrieved context injected into the prompt
     prompt = (
-        f"You are a helpful travel assistant. "
+        f"You are a helpful and friendly travel assistant.\n"
         f"Use the following reference documents to answer the question accurately.\n\n"
+        f"IMPORTANT INSTRUCTION ON LANGUAGE:\n"
+        f"- Always answer in the SAME LANGUAGE as the user's question. If the user asks in Indonesian, answer in natural Indonesian.\n"
+        f"- Translate and summarize the information from the reference documents to match the question's language.\n\n"
         f"REFERENCE DOCUMENTS:\n{context}\n\n"
         f"QUESTION: {question}\n\n"
-        f"Answer based on the documents above. If the answer is not in the documents, say so."
+        f"Answer clearly based on the documents above. If the answer is not in the documents, say so in the user's language."
     )
 
     runtime = get_bedrock_runtime_client()
