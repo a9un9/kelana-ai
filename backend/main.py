@@ -12,7 +12,12 @@ from services.trip_services import (
 from database import init_db, SessionLocal
 from models.trip import Trip
 from models.user import User
-from services.bedrock_service import get_ai_recommendation
+from models.conversation import Conversation
+from models.message import Message
+from services.bedrock_service import (
+    get_ai_recommendation,
+    generate_conversation_reply,
+)
 from services.kb_service import ask_knowledge_base
 
 load_dotenv()
@@ -54,6 +59,15 @@ class UpdateProfileRequest(BaseModel):
 
 class KnowledgeQueryRequest(BaseModel):
     question: str
+
+class CreateConversationRequest(BaseModel):
+    title: str | None = None
+
+class SendMessageRequest(BaseModel):
+    content: str
+
+class RenameConversationRequest(BaseModel):
+    title: str
 
 from services.auth_service import register, login, get_current_user, hash_password
 from datetime import datetime
@@ -385,3 +399,291 @@ def ask_knowledge(
         "answer": result["answer"],
         "sources": result["sources"],
     }
+
+
+# ---------------------------------------------------------------------------
+# Part 3 — Conversation APIs
+# ---------------------------------------------------------------------------
+
+# POST /api/v1/conversations
+# Create a new conversation row and return its identifier.
+@app.post("/api/v1/conversations", status_code=201)
+def create_conversation(
+    request: CreateConversationRequest | None = None,
+    user: User = Depends(get_current_user),
+):
+    db = SessionLocal()
+    try:
+        title = request.title if (request and request.title) else None
+        conversation = Conversation(
+            user_id=user.id,
+            title=title,
+        )
+        db.add(conversation)
+        db.commit()
+        db.refresh(conversation)
+
+        return {
+            "conversation_id": conversation.id
+        }
+    finally:
+        db.close()
+
+
+# GET /api/v1/conversations
+# List previous conversations for the authenticated user.
+@app.get("/api/v1/conversations")
+def list_conversations(
+    user: User = Depends(get_current_user),
+):
+    db = SessionLocal()
+    try:
+        conversations = (
+            db.query(Conversation)
+            .filter(Conversation.user_id == user.id)
+            .order_by(Conversation.created_at.desc())
+            .all()
+        )
+        return [
+            {
+                "id": c.id,
+                "title": c.title,
+                "created_at": c.created_at,
+            }
+            for c in conversations
+        ]
+    finally:
+        db.close()
+
+
+# PATCH /api/v1/conversations/{conversation_id}
+# Rename a conversation
+@app.patch("/api/v1/conversations/{conversation_id}")
+def rename_conversation(
+    conversation_id: int,
+    request: RenameConversationRequest,
+    user: User = Depends(get_current_user),
+):
+    if not request.title or not request.title.strip():
+        raise HTTPException(status_code=400, detail="Conversation title cannot be empty")
+
+    db = SessionLocal()
+    try:
+        conversation = (
+            db.query(Conversation)
+            .filter(Conversation.id == conversation_id)
+            .first()
+        )
+        if conversation is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Conversation with id {conversation_id} not found",
+            )
+
+        if conversation.user_id != user.id:
+            raise HTTPException(
+                status_code=403,
+                detail="Forbidden: You do not own this conversation",
+            )
+
+        conversation.title = request.title.strip()
+        db.commit()
+        db.refresh(conversation)
+
+        return {
+            "id": conversation.id,
+            "title": conversation.title,
+            "created_at": conversation.created_at,
+        }
+    finally:
+        db.close()
+
+
+# DELETE /api/v1/conversations/{conversation_id}
+# Delete a conversation
+@app.delete("/api/v1/conversations/{conversation_id}")
+def delete_conversation(
+    conversation_id: int,
+    user: User = Depends(get_current_user),
+):
+    db = SessionLocal()
+    try:
+        conversation = (
+            db.query(Conversation)
+            .filter(Conversation.id == conversation_id)
+            .first()
+        )
+        if conversation is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Conversation with id {conversation_id} not found",
+            )
+
+        if conversation.user_id != user.id:
+            raise HTTPException(
+                status_code=403,
+                detail="Forbidden: You do not own this conversation",
+            )
+
+        db.delete(conversation)
+        db.commit()
+
+        return {"message": f"Conversation with id {conversation_id} deleted"}
+    finally:
+        db.close()
+
+
+
+# ---------------------------------------------------------------------------
+# Part 4 — Send Message API
+# ---------------------------------------------------------------------------
+
+# POST /api/v1/conversations/{conversation_id}/messages
+# Orchestration flow:
+# 01 Receive user message
+# 02 Save user message to database
+# 03 Load previous messages from database
+# 04 Build prompt/messages payload
+# 05 Call Amazon Bedrock
+# 06 Save AI response to database
+# 07 Return response
+@app.post("/api/v1/conversations/{conversation_id}/messages")
+def send_conversation_message(
+    conversation_id: int,
+    request: SendMessageRequest,
+    user: User = Depends(get_current_user),
+):
+    if not request.content or not request.content.strip():
+        raise HTTPException(status_code=400, detail="Message content cannot be empty")
+
+    db = SessionLocal()
+    try:
+        # Step 01: Verify conversation and ownership
+        conversation = (
+            db.query(Conversation)
+            .filter(Conversation.id == conversation_id)
+            .first()
+        )
+        if conversation is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Conversation with id {conversation_id} not found",
+            )
+
+        if conversation.user_id != user.id:
+            raise HTTPException(
+                status_code=403,
+                detail="Forbidden: You do not own this conversation",
+            )
+
+        # Update conversation title if not set yet
+        if not conversation.title:
+            cleaned_title = request.content.strip()
+            conversation.title = (
+                cleaned_title[:47] + "..." if len(cleaned_title) > 50 else cleaned_title
+            )
+
+        # Step 02: Save user message
+        user_message = Message(
+            conversation_id=conversation.id,
+            role="user",
+            content=request.content.strip(),
+        )
+        db.add(user_message)
+        db.commit()
+        db.refresh(user_message)
+
+        # Step 03: Load previous messages (ordered chronologically)
+        all_messages = (
+            db.query(Message)
+            .filter(Message.conversation_id == conversation.id)
+            .order_by(Message.created_at.asc())
+            .all()
+        )
+
+        # Step 04: Build prompt
+        formatted_messages = [
+            {
+                "role": m.role if m.role in ["user", "assistant"] else "user",
+                "content": [{"text": m.content}],
+            }
+            for m in all_messages
+        ]
+
+        # Step 05: Call Amazon Bedrock
+        try:
+            ai_reply_text = generate_conversation_reply(formatted_messages)
+        except Exception as exc:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to generate AI response: {str(exc)}",
+            )
+
+        # Step 06: Save AI response
+        ai_message = Message(
+            conversation_id=conversation.id,
+            role="assistant",
+            content=ai_reply_text,
+        )
+        db.add(ai_message)
+        db.commit()
+        db.refresh(ai_message)
+
+        # Step 07: Return response
+        return {
+            "conversation_id": conversation.id,
+            "role": ai_message.role,
+            "content": ai_message.content,
+            "created_at": ai_message.created_at,
+        }
+    finally:
+        db.close()
+
+
+# GET /api/v1/conversations/{conversation_id}/messages
+# List all messages in a conversation
+@app.get("/api/v1/conversations/{conversation_id}/messages")
+def list_conversation_messages(
+    conversation_id: int,
+    user: User = Depends(get_current_user),
+):
+    db = SessionLocal()
+    try:
+        conversation = (
+            db.query(Conversation)
+            .filter(Conversation.id == conversation_id)
+            .first()
+        )
+        if conversation is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Conversation with id {conversation_id} not found",
+            )
+
+        if conversation.user_id != user.id:
+            raise HTTPException(
+                status_code=403,
+                detail="Forbidden: You do not own this conversation",
+            )
+
+        messages = (
+            db.query(Message)
+            .filter(Message.conversation_id == conversation.id)
+            .order_by(Message.created_at.asc())
+            .all()
+        )
+
+        return [
+            {
+                "id": m.id,
+                "conversation_id": m.conversation_id,
+                "role": m.role,
+                "content": m.content,
+                "created_at": m.created_at,
+            }
+            for m in messages
+        ]
+    finally:
+        db.close()
+
+

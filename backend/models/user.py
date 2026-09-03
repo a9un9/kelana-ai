@@ -16,6 +16,8 @@ class User(Base):
     updated_by = Column(String(100), nullable=True)
 
     trips = relationship("Trip", back_populates="owner")
+    conversations = relationship("Conversation", back_populates="user")
 
-# Import Trip at the end to avoid circular imports but ensure registry is populated
+# Import models at the end to avoid circular imports but ensure registry is populated
 import models.trip  # noqa: F401
+import models.conversation  # noqa: F401

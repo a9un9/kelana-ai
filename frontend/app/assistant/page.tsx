@@ -43,6 +43,7 @@ export default function AssistantPage() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [copiedId, setCopiedId] = useState<number | null>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const nextIdRef = useRef(1);
@@ -53,9 +54,14 @@ export default function AssistantPage() {
     }
   }, [router]);
 
-  // Auto-scroll to latest message
+  // Auto-scroll strictly within the messages container
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTo({
+        top: messagesContainerRef.current.scrollHeight,
+        behavior: "smooth",
+      });
+    }
   }, [messages, loading]);
 
   const handleSendQuery = async (queryText: string) => {
@@ -130,43 +136,43 @@ export default function AssistantPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col font-sans selection:bg-blue-200 selection:text-blue-900 relative">
+    <div className="h-screen max-h-screen overflow-hidden flex flex-col font-sans selection:bg-blue-200 selection:text-blue-900 relative">
       {/* Background Image & Gradient Overlay */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=2073&auto=format&fit=crop"
         alt="Background"
-        className="fixed inset-0 w-full h-full object-cover -z-20 blur-[2px] scale-105"
+        className="fixed inset-0 w-full h-full object-cover -z-20 blur-[2px] scale-105 pointer-events-none"
       />
-      <div className="fixed inset-0 bg-gradient-to-b from-slate-950/75 via-slate-900/60 to-slate-950/85 -z-10" />
+      <div className="fixed inset-0 bg-gradient-to-b from-slate-950/75 via-slate-900/60 to-slate-950/85 -z-10 pointer-events-none" />
 
       {/* Floating Animated Particles for Theme Consistency */}
-      <div className="particle particle-1 top-24 left-16" />
-      <div className="particle particle-2 top-48 right-24" />
-      <div className="particle particle-3 top-96 left-1/4" />
-      <div className="particle particle-2 bottom-32 right-1/3" />
+      <div className="particle particle-1 top-24 left-16 pointer-events-none" />
+      <div className="particle particle-2 top-48 right-24 pointer-events-none" />
+      <div className="particle particle-3 top-96 left-1/4 pointer-events-none" />
+      <div className="particle particle-2 bottom-32 right-1/3 pointer-events-none" />
 
       {/* Header Section */}
-      <div className="w-full pt-28 pb-4 px-4 md:px-8 text-center animate-float-up">
-        <div className="inline-flex items-center gap-2 py-1.5 px-4 rounded-lg bg-white/10 backdrop-blur-md border border-white/25 shadow-lg mb-3">
+      <div className="w-full pt-20 pb-2 px-4 md:px-8 text-center flex-shrink-0 animate-float-up">
+        <div className="inline-flex items-center gap-2 py-1 px-3.5 rounded-lg bg-white/10 backdrop-blur-md border border-white/25 shadow-lg mb-2">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
           <span className="text-[11px] font-bold tracking-wider uppercase text-cyan-200">
             RAG Knowledge Base • Bedrock
           </span>
         </div>
 
-        <h1 className="text-3xl md:text-5xl font-black text-white drop-shadow-2xl tracking-tight mb-2">
+        <h1 className="text-2xl md:text-4xl font-black text-white drop-shadow-2xl tracking-tight mb-1">
           Kelana <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">Travel Assistant</span>
         </h1>
-        <p className="text-white/80 text-sm md:text-base font-medium max-w-xl mx-auto">
+        <p className="text-white/80 text-xs md:text-sm font-medium max-w-xl mx-auto">
           Ask questions grounded directly in your uploaded travel guides, visa rules, and insurance policies.
         </p>
 
         {messages.length > 0 && (
-          <div className="mt-3 flex items-center justify-center gap-3">
+          <div className="mt-2 flex items-center justify-center gap-3">
             <button
               onClick={handleClearChat}
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white/80 hover:text-white text-xs font-semibold backdrop-blur-sm border border-white/15 transition cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-lg bg-white/10 hover:bg-white/20 text-white/80 hover:text-white text-xs font-semibold backdrop-blur-sm border border-white/15 transition cursor-pointer"
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -179,11 +185,16 @@ export default function AssistantPage() {
         )}
       </div>
 
-      {/* Main Chat Container */}
-      <div className="flex-1 w-full max-w-3xl mx-auto px-4 md:px-6 pb-16 flex flex-col gap-6 relative z-10">
+      {/* Main Chat Container (Fixed height within viewport, only messages scroll) */}
+      <div className="flex-1 min-h-0 w-full max-w-3xl mx-auto px-4 md:px-6 pb-3 flex flex-col justify-between overflow-hidden relative z-10">
         
-        {/* Empty State / Quick Starters */}
-        {messages.length === 0 && !loading && (
+        {/* Messages Scroll Container — ONLY THIS AREA SCROLLS */}
+        <div
+          ref={messagesContainerRef}
+          className="flex-1 min-h-0 overflow-y-auto pr-1 md:pr-2 space-y-4 custom-scrollbar"
+        >
+          {/* Empty State / Quick Starters */}
+          {messages.length === 0 && !loading && (
           <div className="mt-4 flex flex-col gap-6 animate-float-up">
             {/* Welcome Card */}
             <div className="rounded-lg bg-white/10 backdrop-blur-xl border border-white/20 p-6 md:p-8 text-center text-white shadow-2xl relative overflow-hidden">
@@ -380,8 +391,11 @@ export default function AssistantPage() {
           </div>
         )}
 
-        {/* Input Bar Form */}
-        <div className="sticky bottom-6 z-20 mt-4 pt-2">
+          <div ref={bottomRef} />
+        </div>
+
+        {/* Fixed Input Bar Form at Bottom */}
+        <div className="pt-3 flex-shrink-0 z-20">
           <form
             onSubmit={handleSubmit}
             className="form-card-glow flex items-center gap-2 md:gap-3 bg-white/95 backdrop-blur-xl rounded-lg border border-white/50 shadow-2xl p-2 md:p-2.5"
@@ -441,8 +455,6 @@ export default function AssistantPage() {
             <span>Grounding documents verified ✅</span>
           </div>
         </div>
-
-        <div ref={bottomRef} />
       </div>
     </div>
   );

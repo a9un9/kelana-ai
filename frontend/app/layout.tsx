@@ -18,6 +18,17 @@ export const metadata: Metadata = {
     default: "Plan Trip | KelanaAI", // This will be used when page doesn't specify title
   },
   description: "AI-powered travel planner assistant",
+  icons: {
+    icon: [
+      { url: "/icon.png", type: "image/png" },
+      { url: "/favicon.ico", type: "image/x-icon" },
+      { url: "/logos/logo_kelana_transparent.png" },
+    ],
+    shortcut: ["/icon.png", "/favicon.ico"],
+    apple: [
+      { url: "/apple-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
 };
 
 import Navbar from "@/components/Navbar";

@@ -1,7 +1,7 @@
-backend/__pycache__/
-backend/services/__pycache__/
+backend/**/__pycache__/
+**/__pycache__/
 backend/*.pyc
+*.pyc
 backend/.venv
 backend/.env
 backend/services/bedrock_service.py
-models/__pycache__/

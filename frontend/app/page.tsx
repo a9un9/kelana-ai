@@ -35,6 +35,25 @@ export default function Home() {
   const [loadingAI, setLoadingAI] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const dest = params.get("destination");
+      const days = params.get("days");
+      const budget = params.get("budget");
+      const style = params.get("style");
+
+      if (dest || days || budget || style) {
+        setForm({
+          destination: dest || "",
+          days: days || "",
+          budget: budget || "",
+          travel_style: style || "",
+        });
+      }
+    }
+  }, []);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
@@ -190,7 +209,7 @@ export default function Home() {
               )}
 
               <button type="submit" disabled={loading}
-                className="animate-pulse-glow mt-4 w-full rounded-2xl bg-gradient-to-r from-indigo-600 via-blue-600 to-teal-500 hover:from-indigo-500 hover:via-blue-500 hover:to-teal-400 disabled:opacity-70 text-white font-bold text-base py-4 transition-all duration-300 cursor-pointer transform hover:-translate-y-0.5 active:translate-y-0">
+                className="mt-4 w-full rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 disabled:opacity-70 text-white font-bold text-base py-3.5 transition-all duration-300 cursor-pointer shadow-lg shadow-blue-500/25 transform hover:-translate-y-0.5 active:translate-y-0">
                 {loading ? (
                   <span className="flex items-center justify-center gap-2">
                     <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -200,7 +219,7 @@ export default function Home() {
                     Generating...
                   </span>
                 ) : (
-                  "✨ Create Trip Summary"
+                  "Create Trip Summary"
                 )}
               </button>
             </form>
@@ -251,7 +270,7 @@ export default function Home() {
                   <div className="mt-10 bg-blue-50/50 rounded-lg p-6 border border-blue-100 text-center">
                     <p className="text-sm font-medium text-blue-900/70 mb-4">Ready for the details? Let our AI craft your day-by-day itinerary.</p>
                     <button onClick={handleGenerateAI} disabled={loadingAI}
-                      className="w-full md:w-auto rounded-lg bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50 text-white font-bold text-sm px-8 py-3.5 transition-all duration-300 shadow-md hover:shadow-lg flex items-center justify-center gap-2 cursor-pointer mx-auto">
+                      className="w-full md:w-auto rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 disabled:opacity-50 text-white font-bold text-sm px-8 py-3.5 transition-all duration-300 shadow-md shadow-blue-500/20 hover:shadow-lg flex items-center justify-center gap-2 cursor-pointer mx-auto">
                       {loadingAI ? (
                         <>
                           <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -260,7 +279,7 @@ export default function Home() {
                           </svg>
                           Generating your adventure...
                         </>
-                      ) : "✨ Generate Full Itinerary"}
+                      ) : "Generate Full Itinerary"}
                     </button>
                   </div>
                 )}
