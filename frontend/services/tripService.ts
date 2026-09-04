@@ -1,8 +1,8 @@
 import type { Trip, TripRequest, TripResult, GenerateResult } from "@/types";
 import { getToken, logout } from "@/lib/auth";
 
-// Read API URL from .env - no more hardcoding
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+// Read API URL from .env - fallback to deployed Vercel backend
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || "https://kelana-ai-api-one.vercel.app/api/v1").replace(/\/$/, "");
 
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────

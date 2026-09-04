@@ -1,7 +1,7 @@
 import type { Conversation, Message } from "@/types";
 import { getToken, logout } from "@/lib/auth";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || "https://kelana-ai-api-one.vercel.app/api/v1").replace(/\/$/, "");
 
 function getAuthHeaders(includeContentType = true) {
   const headers: Record<string, string> = {};
