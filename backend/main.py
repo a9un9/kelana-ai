@@ -39,9 +39,19 @@ app = FastAPI(
 # Register Bearer token security scheme so Swagger UI shows the Authorize button
 security = HTTPBearer()
 
+frontend_env = os.getenv("FRONTEND_URL", "")
+allowed_origins = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3000",
+]
+if frontend_env and frontend_env not in allowed_origins:
+    allowed_origins.append(frontend_env)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[os.getenv("FRONTEND_URL", "http://localhost:3000")],
+    allow_origins=allowed_origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
