@@ -20,11 +20,21 @@ from services.bedrock_service import (
 )
 from services.kb_service import ask_knowledge_base
 
+from fastapi.openapi.docs import get_swagger_ui_html
+from fastapi.openapi.utils import get_openapi
+from fastapi.responses import JSONResponse
+
 load_dotenv()
 
 init_db()
 
-app = FastAPI()
+app = FastAPI(
+    title="KelanaAI API",
+    version="1.0.0",
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
+)
 
 # Register Bearer token security scheme so Swagger UI shows the Authorize button
 security = HTTPBearer()
@@ -72,16 +82,36 @@ class RenameConversationRequest(BaseModel):
 from services.auth_service import register, login, get_current_user, hash_password
 from datetime import datetime
 
-# 1. GET /
+# Swagger UI & OpenAPI schema (support both /docs and /api/docs on Vercel)
+@app.get("/docs", include_in_schema=False)
+@app.get("/api/docs", include_in_schema=False)
+@app.get("/api/py/docs", include_in_schema=False)
+async def custom_swagger_ui_html():
+    return get_swagger_ui_html(
+        openapi_url="/openapi.json",
+        title=app.title + " - Swagger UI",
+        swagger_js_url="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js",
+        swagger_css_url="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css",
+    )
+
+@app.get("/openapi.json", include_in_schema=False)
+@app.get("/api/openapi.json", include_in_schema=False)
+@app.get("/api/py/openapi.json", include_in_schema=False)
+async def custom_openapi():
+    return JSONResponse(get_openapi(title=app.title, version=app.version, routes=app.routes))
+
+# 1. GET / and /api
 @app.get("/")
+@app.get("/api")
 def home():
     return {
         "message": "Welcome to KelanaAI"
     }
 
 
-# 2. GET /health
+# 2. GET /health and /api/health
 @app.get("/health")
+@app.get("/api/health")
 def health():
     return {
         "status": "ok"
