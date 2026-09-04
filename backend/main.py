@@ -31,9 +31,9 @@ init_db()
 app = FastAPI(
     title="KelanaAI API",
     version="1.0.0",
-    docs_url=None,
-    redoc_url=None,
-    openapi_url=None,
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
 )
 
 # Register Bearer token security scheme so Swagger UI shows the Authorize button
