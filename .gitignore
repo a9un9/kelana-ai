@@ -4,4 +4,6 @@ backend/*.pyc
 *.pyc
 backend/.venv
 backend/.env
-backend/services/bedrock_service.py
+.env
+frontend/.env
+frontend/.next/

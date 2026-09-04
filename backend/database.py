@@ -7,10 +7,15 @@ import os
 load_dotenv()
 
 # connection string from .env — never hardcode secrets
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./temp.db")
+if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 # engine = the connection pool
-engine = create_engine(DATABASE_URL)
+if DATABASE_URL and DATABASE_URL.startswith("sqlite"):
+    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+else:
+    engine = create_engine(DATABASE_URL)
 
 # SessionLocal = a factory for DB sessions
 SessionLocal = sessionmaker(bind=engine, autoflush=False)
@@ -21,12 +26,15 @@ Base = declarative_base()
 # create all tables
 def init_db() -> None:
     """Create all SQLAlchemy tables for the configured database."""
-    # import all models so their metadata is registered before create_all
-    import models.user  # noqa: F401
-    import models.trip  # noqa: F401
-    import models.conversation  # noqa: F401
-    import models.message  # noqa: F401
-    Base.metadata.create_all(bind=engine)
+    try:
+        # import all models so their metadata is registered before create_all
+        import models.user  # noqa: F401
+        import models.trip  # noqa: F401
+        import models.conversation  # noqa: F401
+        import models.message  # noqa: F401
+        Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        print(f"Warning: could not initialize database tables: {e}")
 
 def get_db():
     db = SessionLocal()
@@ -34,4 +42,3 @@ def get_db():
         yield db
     finally:
         db.close()
-

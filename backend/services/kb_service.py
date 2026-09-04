@@ -5,25 +5,27 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-AWS_REGION = os.getenv("AWS_REGION")
+AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
 KNOWLEDGE_BASE_ID = os.getenv("KNOWLEDGE_BASE_ID")
 KNOWLEDGE_BASE_MODEL_ARN = os.getenv("KNOWLEDGE_BASE_MODEL_ARN")
-MODEL_ID = os.getenv("MODEL_ID")
+MODEL_ID = os.getenv("MODEL_ID", "amazon.nova-micro-v1:0")
 
 
 def get_bedrock_agent_runtime_client():
     """bedrock-agent-runtime → Retrieve / RetrieveAndGenerate"""
+    region = os.getenv("AWS_REGION") or "us-east-1"
     return boto3.client(
         service_name="bedrock-agent-runtime",
-        region_name=AWS_REGION,
+        region_name=region,
     )
 
 
 def get_bedrock_runtime_client():
     """bedrock-runtime → InvokeModel (LLM)"""
+    region = os.getenv("AWS_REGION") or "us-east-1"
     return boto3.client(
         service_name="bedrock-runtime",
-        region_name=AWS_REGION,
+        region_name=region,
     )
 
 
@@ -39,10 +41,12 @@ def ask_knowledge_base(question: str) -> dict:
     """
     agent_runtime = get_bedrock_agent_runtime_client()
 
+    kb_id = os.getenv("KNOWLEDGE_BASE_ID") or KNOWLEDGE_BASE_ID
+
     # Step 1 — Retrieve relevant passages from the Knowledge Base
     # Managed KBs require managedSearchConfiguration (not vectorSearchConfiguration)
     retrieve_response = agent_runtime.retrieve(
-        knowledgeBaseId=KNOWLEDGE_BASE_ID,
+        knowledgeBaseId=kb_id,
         retrievalQuery={"text": question},
         retrievalConfiguration={
             "managedSearchConfiguration": {}
@@ -78,6 +82,8 @@ def ask_knowledge_base(question: str) -> dict:
     )
 
     runtime = get_bedrock_runtime_client()
+    model_id = os.getenv("MODEL_ID") or MODEL_ID
+
     body = json.dumps({
         "messages": [
             {
@@ -92,7 +98,7 @@ def ask_knowledge_base(question: str) -> dict:
     })
 
     response = runtime.invoke_model(
-        modelId=MODEL_ID,
+        modelId=model_id,
         contentType="application/json",
         accept="application/json",
         body=body,
